@@ -20,7 +20,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd /home/ec2-user/your-app
+            cd /home/ubuntu/minecraft_code
             git pull origin main
             # 必要に応じてビルド・再起動コマンドを追加
             # npm install && pm2 restart app
