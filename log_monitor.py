@@ -14,6 +14,9 @@ import re
 import time
 import requests
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ========== 設定 ==========
 LOG_FILE = os.getenv('MC_LOG_FILE', '/home/ubuntu/minecraft_server/logs/latest.log')
