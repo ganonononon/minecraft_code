@@ -22,6 +22,8 @@ async def main():
     async with bot:
         await bot.load_extension('cogs.server')
         await bot.load_extension('cogs.whitelist')
+        await bot.load_extension('cogs.backup')
+        await bot.load_extension('cogs.death')
         await bot.start(DISCORD_TOKEN)
 
 # ========== Bot起動 ==========
