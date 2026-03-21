@@ -15,8 +15,15 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 async def on_ready():
     print(f'{bot.user} でログインしました！')
     print(f'Bot ID: {bot.user.id}')
-    await bot.tree.sync()
-    print('スラッシュコマンドをSyncしました')
+    guild_id = int(os.getenv('GUILD_ID', '0'))
+    if guild_id:
+        guild = discord.Object(id=guild_id)
+        bot.tree.copy_global_to(guild=guild)
+        await bot.tree.sync(guild=guild)
+        print(f'スラッシュコマンドをSyncしました（ギルド: {guild_id}）')
+    else:
+        await bot.tree.sync()
+        print('スラッシュコマンドをSyncしました（グローバル）')
     print('------')
 
 # ========== Cog読み込み ==========
