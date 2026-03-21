@@ -15,6 +15,8 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 async def on_ready():
     print(f'{bot.user} でログインしました！')
     print(f'Bot ID: {bot.user.id}')
+    await bot.tree.sync()
+    print('スラッシュコマンドをSyncしました')
     print('------')
 
 # ========== Cog読み込み ==========
