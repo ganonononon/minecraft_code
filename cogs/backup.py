@@ -13,7 +13,6 @@ class BackupCog(commands.Cog):
         self.volume_id = os.getenv('EBS_VOLUME_ID')  # .envで管理
 
     @app_commands.command(name="backup", description="EBSスナップショットを手動で作成します")
-    @app_commands.checks.has_role("Admin")  # ロール制限推奨
     async def backup(self, interaction: discord.Interaction):
         # 即座にDefer（スナップショットは非同期なので）
         await interaction.response.defer(ephemeral=False)
