@@ -1,6 +1,9 @@
 import discord
 from discord.ext import commands
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ========== 設定 ==========
 DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
