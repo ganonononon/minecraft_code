@@ -1,52 +1,84 @@
 import discord
-from discord.ext import commands
-from aiohttp import web
+from discord.ext import commands, tasks
 import asyncio
 import os
+import re
 
 # ========== 設定 ==========
-DEATH_CHANNEL_ID = int(os.getenv('DEATH_CHANNEL_ID', '0'))  # 通知先チャンネルID
-DEATH_WEBHOOK_PORT = int(os.getenv('DEATH_WEBHOOK_PORT', '8080'))  # 受信ポート
-DEATH_WEBHOOK_SECRET = os.getenv('DEATH_WEBHOOK_SECRET', '')  # セキュリティ用シークレット
+DEATH_CHANNEL_ID = int(os.getenv('DEATH_CHANNEL_ID', '0'))
+MC_LOG_FILE = os.getenv('MC_LOG_FILE', '/home/ubuntu/minecraft_server/logs/latest.log')
+
+# ========== 死亡メッセージのパターン ==========
+LOG_LINE_PATTERN = re.compile(r'\[Server thread/INFO\]: (.+)')
+
+DEATH_KEYWORDS = [
+    'was slain by',
+    'was shot by',
+    'was blown up by',
+    'was killed by',
+    'drowned',
+    'fell from',
+    'fell off',
+    'hit the ground',
+    'burned to death',
+    'tried to swim in lava',
+    'suffocated',
+    'blew up',
+    'starved to death',
+    'died',
+    'was impaled',
+    'experienced kinetic energy',
+    'was pummeled',
+    'went up in flames',
+]
+
+
+def is_death_message(message: str) -> bool:
+    return any(keyword in message for keyword in DEATH_KEYWORDS)
+
 
 # ========== 死亡通知Cog ==========
 class DeathCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.app = web.Application()
-        self.app.router.add_post('/death', self.handle_death_event)
-        self.runner = None
-
-    async def cog_load(self):
-        """Cog読み込み時にWebhookサーバーを起動"""
-        self.runner = web.AppRunner(self.app)
-        await self.runner.setup()
-        site = web.TCPSite(self.runner, '0.0.0.0', DEATH_WEBHOOK_PORT)
-        await site.start()
-        print(f'死亡通知Webhookサーバー起動中 (ポート: {DEATH_WEBHOOK_PORT})')
+        self._log_file = None
+        self.monitor_log.start()
 
     async def cog_unload(self):
-        """Cog削除時にサーバーを停止"""
-        if self.runner:
-            await self.runner.cleanup()
+        self.monitor_log.cancel()
+        if self._log_file:
+            self._log_file.close()
 
-    async def handle_death_event(self, request: web.Request) -> web.Response:
-        """Minecraftサーバーからの死亡通知を受け取る"""
-        # シークレットキーの確認（設定している場合）
-        if DEATH_WEBHOOK_SECRET:
-            secret = request.headers.get('X-Secret', '')
-            if secret != DEATH_WEBHOOK_SECRET:
-                return web.Response(status=403, text='Forbidden')
+    @tasks.loop(seconds=1)
+    async def monitor_log(self):
+        """ログファイルを1秒ごとに確認して死亡メッセージを検出する"""
+        if self._log_file is None:
+            return
+        while True:
+            line = self._log_file.readline()
+            if not line:
+                break
+            match = LOG_LINE_PATTERN.search(line)
+            if not match:
+                continue
+            message = match.group(1)
+            if is_death_message(message):
+                player = message.split()[0] if message else 'Unknown'
+                await self.send_death_notification(player, message)
 
+    @monitor_log.before_loop
+    async def before_monitor_log(self):
+        """Bot起動完了を待ってからログファイルを開く"""
+        await self.bot.wait_until_ready()
         try:
-            data = await request.json()
-        except Exception:
-            return web.Response(status=400, text='Invalid JSON')
+            self._log_file = open(MC_LOG_FILE, 'r', encoding='utf-8')
+            self._log_file.seek(0, 2)  # ファイル末尾から監視開始
+            print(f'ログ監視開始: {MC_LOG_FILE}')
+        except FileNotFoundError:
+            print(f'警告: ログファイルが見つかりません: {MC_LOG_FILE}')
 
-        player = data.get('player', 'Unknown')
-        message = data.get('message', '死亡しました')
-
-        # Discordチャンネルに通知を送る
+    async def send_death_notification(self, player: str, message: str):
+        """Discordチャンネルに死亡通知を送る"""
         channel = self.bot.get_channel(DEATH_CHANNEL_ID)
         if channel:
             embed = discord.Embed(
@@ -58,8 +90,6 @@ class DeathCog(commands.Cog):
             await channel.send(embed=embed)
         else:
             print(f'エラー: チャンネルID {DEATH_CHANNEL_ID} が見つかりません')
-
-        return web.Response(text='OK')
 
 
 async def setup(bot):
