@@ -20,10 +20,8 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd /home/ubuntu/minecraft_code
-            git pull origin main
-            pip3 install -r requirements.txt --break-system-packages
-            pkill -f main.py || true
-            sleep 2
-            setsid nohup python3 main.py > bot.log 2>&1 < /dev/null &
-            echo "デプロイ完了"
+  cd /home/ubuntu/minecraft_code
+  git pull origin main
+  pip3 install -r requirements.txt --break-system-packages
+  sudo systemctl restart minecraft-bot.service
+  echo "デプロイ完了"
