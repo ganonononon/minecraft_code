@@ -22,7 +22,7 @@ jobs:
           script: |
             cd /home/ubuntu/minecraft_code
             git pull origin main
-            pip3 install -r requirements.txt
+            pip3 install -r requirements.txt --break-system-packages
             pkill -f main.py || true
             sleep 2
             nohup python3 main.py > bot.log 2>&1 &
