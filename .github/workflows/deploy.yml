@@ -25,6 +25,5 @@ jobs:
             pip3 install -r requirements.txt --break-system-packages
             pkill -f main.py || true
             sleep 2
-            nohup python3 main.py > bot.log 2>&1 &
-            disown
+            setsid nohup python3 main.py > bot.log 2>&1 < /dev/null &
             echo "デプロイ完了"
