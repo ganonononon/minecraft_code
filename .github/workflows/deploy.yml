@@ -26,4 +26,5 @@ jobs:
             pkill -f main.py || true
             sleep 2
             nohup python3 main.py > bot.log 2>&1 &
+            disown
             echo "デプロイ完了"
